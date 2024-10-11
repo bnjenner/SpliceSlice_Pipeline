@@ -6,8 +6,7 @@ Utilizes:
 * Bedtools (http://bedtools.readthedocs.org/) 
 * BP_PPT.py (https://github.com/zhqingit/BPP)
 * HOMER (http://homer.ucsd.edu/homer/)
-* Custom Python Scripts
-* Unix Commands
+* Bash and Python Scripts
 
 
 ### Installation
@@ -34,5 +33,7 @@ Best to search how to do this on your specific system.
 
 ### Running SpliceSlice.sh
 ```
-SpliceSlice.sh [-h] transcript_list_file genome annotaion
+SpliceSlice.sh [-h] transcript_list1 transcript_list2 genome annotaion [ -o output_directory ]
 ```
+
+Input files "transcript_list" should be a plain text file where each line contains one valid transcript ID.

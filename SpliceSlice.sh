@@ -3,7 +3,7 @@
 ##########################################################3
 # Function to display help message
 usage() {
-    echo "Usage: $0 [-h] transcript_list_file genome annotaion"
+    echo "Usage: $0 transcript_list1 transcript_list2 genome annotaion [ -o output_directory ]"
     echo
     echo "Positional arguments:"
     echo "  transcript_list1        Path to file with first list of transcripts."
@@ -16,7 +16,7 @@ usage() {
 }
 
 # Parse optional arguments
-while getopts ":h" opt; do
+while getopts ":o:h" opt; do
     case ${opt} in
         h )
             usage
@@ -171,7 +171,7 @@ findMotifs.pl ${output}/01-BP_Predictions/${prefix_1}.BP_predictions.fasta \
 # Group 2 vs Group 1
 findMotifs.pl ${output}/01-BP_Predictions/${prefix_2}.BP_predictions.fasta \
 			fasta ${output}/02-Motif_Analysis/${prefix_2}_v_${prefix_1} -len 7 \
-			-fasta ${output}/01-BP_Predictions/${prefix_1}.BP_predictions.fasta
+			-fasta ${output}/01-BP_Predictions/${prefix_1}.BP_predictions.fasta \
 			1> ${output}/02-Motif_Analysis/${prefix_2}_v_${prefix_1}/logs/findMotifs.stdout \
 			2> ${output}/02-Motif_Analysis/${prefix_2}_v_${prefix_1}/logs/findMotifs.stderr
 
