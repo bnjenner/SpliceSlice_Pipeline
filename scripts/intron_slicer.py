@@ -110,19 +110,19 @@ def get_bed(input_file, bp_window, utr_window, training):
 
 						# Potential Targets
 						print(gtf_dict[transcript_id]["chrom"],
-							  introns[x] - 1 - (10 - bp_window), 
+							  introns[x] - 1 - (10 + bp_window), 
 							  introns[x] - 1 - 10 + 1, #  bed files are half open
 							  str(transcript_id) + ".intron_" + str(x // 2) + ".target",
 							  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
 						if training and ((introns[x + 1] - introns[x]) < 300):
 
-							# BPS Training
-							print(gtf_dict[transcript_id]["chrom"],
-								  introns[x] - 1 - (34), 
-								  introns[x] - 1 - (21) + 1, #  bed files are half open
-								  str(transcript_id) + ".intron_" + str(x // 2) + ".bps",
-								  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+							# # BPS Training
+							# print(gtf_dict[transcript_id]["chrom"],
+							# 	  introns[x] - 1 - (34), 
+							# 	  introns[x] - 1 - (21) + 1, #  bed files are half open
+							# 	  str(transcript_id) + ".intron_" + str(x // 2) + ".bps",
+							# 	  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
 							# Background Training
 							print(gtf_dict[transcript_id]["chrom"],
@@ -152,17 +152,17 @@ def get_bed(input_file, bp_window, utr_window, training):
 						print(gtf_dict[transcript_id]["chrom"],
 							  introns[x] - 1 + 10,
 							  introns[x] - 1 + (10 + bp_window) + 1, # bed files are half open
-							  str(transcript_id) + ".intron_" + str(x // 2) + ".3prime",
+							  str(transcript_id) + ".intron_" + str(x // 2) + ".target",
 							  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
 						if training and ((introns[x + 1] - introns[x]) < 300):
 
-							# BPS Training
-							print(gtf_dict[transcript_id]["chrom"],
-								  introns[x] - 1 + (21),
-								  introns[x] - 1 + (34) + 1,
-								  str(transcript_id) + ".intron_" + str(x // 2) + ".bps",
-								  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+							# # BPS Training
+							# print(gtf_dict[transcript_id]["chrom"],
+							# 	  introns[x] - 1 + (21),
+							# 	  introns[x] - 1 + (34) + 1,
+							# 	  str(transcript_id) + ".intron_" + str(x // 2) + ".bps",
+							# 	  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
 							# Background Training
 							print(gtf_dict[transcript_id]["chrom"],
@@ -183,9 +183,6 @@ def get_bed(input_file, bp_window, utr_window, training):
 if __name__ == "__main__":
 	
 	args = parse_arguments()
-	print(f"Input file: {args.input}")
-	print(f"output file: {args.annotation}")
 
 	gtf_dict = parse_annotation(args.annotation)
-	
 	get_bed(args.input, args.bp_window, args.utr_window, args.training)

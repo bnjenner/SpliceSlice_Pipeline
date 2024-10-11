@@ -32,7 +32,7 @@ with open(sys.argv[2], "r") as fi:
 	for l in lines:
 
 		if l.startswith('>'):
-			feature = l.split(".")[2].split(":")[0]
+			feature = l.split(".")[3].split(":")[0]
 
 		else:
 			seq = l.strip()
@@ -54,7 +54,6 @@ c_sum = 0
 
 for o, c in freq_dict.items():
 	c_sum += c["ppt"]
-
 
 w_sum = 0
 for o, c in freq_dict.items():

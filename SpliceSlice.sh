@@ -54,31 +54,43 @@ transcript_file_prefix=`basename -s .txt $transcript_file`
 # Slice Introns
 echo "Slicing Introns..."
 mkdir -p ${output}/00-IntronFiles
+
 python3 scripts/intron_slicer.py -i $transcript_file \
 						 -a $annotation --training \
-						 > ${output}/00-IntronFiles/${transcript_file_prefix}.3prime.bed
+						 > ${output}/00-IntronFiles/${transcript_file_prefix}.introns.bed
 
-# Get Sequence
+# Get Sequences
 bedtools getfasta -fi $genome \
-          -bed ${output}/00-IntronFiles/${transcript_file_prefix}.3prime.bed \
-          -s -name > ${output}/00-IntronFiles/${transcript_file_prefix}.3prime.fasta
+				  -bed <(grep ".target" SpliceSlice_Ouput/00-IntronFiles/${transcript_file_prefix}.introns.bed) \
+				  -s -name -fo ${output}/00-IntronFiles/${transcript_file_prefix}.target.fasta
+
+# Temporary File needs to be created be cause process substitution does 
+#	not work and I have no idea why
+grep -v ".target" SpliceSlice_Ouput/00-IntronFiles/${transcript_file_prefix}.introns.bed \
+		> ${output}/00-IntronFiles/${transcript_file_prefix}.training.bed
+bedtools getfasta -fi $genome \
+				  -bed ${output}/00-IntronFiles/${transcript_file_prefix}.training.bed \
+				  -s -name -fo ${output}/00-IntronFiles/${transcript_file_prefix}.training.fasta
+				
 
 
-# # Calculate Octanucleotide Frequences
-# echo "Calculating Octanucleotide Frequences..."
-# python3 scripts/get_freqy.py data/scPPT_human.txt \
-#                 Splice_Slice/gencode.vM34.annotation.splice_slice.features.fasta \
-#                 > Splice_Slice/gencode.vM34.annotation.splice_slice.octanucleotide_freqs.txt
+# Calculate Octanucleotide Frequences
+echo "Calculating Octanucleotide Frequences..."
+python3 scripts/get_freqy.py data/scPPT_human.txt \
+                ${output}/00-IntronFiles/${transcript_file_prefix}.training.fasta \
+                > ${output}/00-IntronFiles/${transcript_file_prefix}.training.octanucleotide_freqs.txt
 
 
-# echo "Predicting Branch Point Sequences..."
-# python scripts/BP_PPT.py -b Splice_Slice/pwmBP_human.txt \
-#                  -p Splice_Slice/gencode.vM34.annotation.splice_slice.octanucleotide_freqs.txt \
-#                  -i Splice_Slice/FB_v_IVF_DE_analysis.IVF_exclude_FB.significant_DOWN.intron_ends.fasta \
-#                  > Splice_Slice/FB_v_IVF_DE_analysis.IVF_exclude_FB.significant_DOWN.BP_predictions.txt
+# Predict Branch Point Sequences
+echo "Predicting Branch Point Sequences..."
+mkdir -p ${output}/01-BP_Predictions
+
+python scripts/BP_PPT.py -b data/pwmBP_human.txt \
+                 -p ${output}/00-IntronFiles/${transcript_file_prefix}.training.octanucleotide_freqs.txt \
+                 -i ${output}/00-IntronFiles/${transcript_file_prefix}.target.fasta \
+                 > ${output}/01-BP_Predictions/${transcript_file_prefix}.BP_predictions.txt
 
 
-# # Set up Output Directory
-# mkdir -p ${output}/00-IntronFiles
-# mkdir -p ${output}/01-BP_Predictions
+
+
 # mkdir -p ${output}/02-MotifAnalysis
