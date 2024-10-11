@@ -99,7 +99,7 @@ def bppt_dis_pro(pAG,offset=22,interval=4):#4 best
     #return(1/(abs(math.log(float(pAG)/offset))/interval+1))
 
 def bppt_get_BPPTsc(seq,maxL,baseppt): # get the candidate bps and ppt and their score
-    
+
     lmotif = 7
     lppt = 8
     l_max_ppt = 20
@@ -183,9 +183,21 @@ def bppt_get_BPPTsc(seq,maxL,baseppt): # get the candidate bps and ppt and their
     zbps = []
     zppt = []
     for i in range(0,len(dsc)):
-        zsc.append(dsc[i]/sdsc)
-        zbps.append(dbpsc[i]/sdbpsc)
-        zppt.append(dpptsc[i]/sdpptsc)
+
+        if sdsc == 0:
+            zsc.append(0)
+        else:
+            zsc.append(dsc[i]/sdsc)
+        
+        if sdbpsc == 0:
+            zbps.append(0)
+        else:
+            zbps.append(dbpsc[i]/sdbpsc)
+        
+        if sdpptsc == 0:
+            zppt.append(0)
+        else:
+            zppt.append(dpptsc[i]/sdpptsc)
 
     return(orinp,zbps,zppt,zsc)
 
@@ -197,7 +209,6 @@ def bppt_print(idd,orinp,zbps,zppt,zsc,REPORTN):
         if end > len(orinp):
             end = len(orinp)
 
-    print "#id\tbps\tbp_pos\tsc_bps\tsc_ppt\tsc\tzsc_bps\tzsc_ppt\tzsc"
     for i in range(0,end):
         print idd+"\t"+orinp[i]+"\t"+str(zbps[i])+"\t"+str(zppt[i])+"\t"+str(zsc[i])
 
@@ -250,6 +261,9 @@ def main(argv):
     PPTS=bppt_get_ppt(pptf) # get the ppt score
     cBPSC = bppt_get_bpscore(mL,basebp)
 
+
+    print "#id\tbps\tbp_pos\tsc_bps\tsc_ppt\tsc\tzsc_bps\tzsc_ppt\tzsc"
+
     idd = ""
     seq = ""
     with open(fastaF,'r') as IN:
@@ -266,6 +280,7 @@ def main(argv):
                     seq = ""
             else:
                 seq = seq+tmp
+
     (orinp,zbps,zppt,zsc) = bppt_get_BPPTsc(seq,maxL=-1,baseppt=baseppt)
     bppt_print(idd,orinp,zbps,zppt,zsc,REPORTN)
 

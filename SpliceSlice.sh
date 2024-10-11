@@ -45,6 +45,10 @@ if [ -z "$output" ]; then
 	output="SpliceSlice_Ouput"
 fi
 
+echo "[ SpliceSlice Analysis Pipeline ]"
+
+start=`date +%s`
+
 # Set Variables
 transcript_file=$1
 genome=$2
@@ -52,7 +56,7 @@ annotation=$3
 transcript_file_prefix=`basename -s .txt $transcript_file`
 
 # Slice Introns
-echo "Slicing Introns..."
+echo "[  - Slicing Introns... ]"
 mkdir -p ${output}/00-IntronFiles
 
 python3 scripts/intron_slicer.py -i $transcript_file \
@@ -75,14 +79,13 @@ bedtools getfasta -fi $genome \
 
 
 # Calculate Octanucleotide Frequences
-echo "Calculating Octanucleotide Frequences..."
-python3 scripts/get_freqy.py data/scPPT_human.txt \
-                ${output}/00-IntronFiles/${transcript_file_prefix}.training.fasta \
+echo "[  - Calculating Octanucleotide Frequences... ]"
+python3 scripts/get_freqy.py \
+				${output}/00-IntronFiles/${transcript_file_prefix}.training.fasta \
                 > ${output}/00-IntronFiles/${transcript_file_prefix}.training.octanucleotide_freqs.txt
 
-
 # Predict Branch Point Sequences
-echo "Predicting Branch Point Sequences..."
+echo "[  - Predicting Branch Point Sequences... ]"
 mkdir -p ${output}/01-BP_Predictions
 
 python scripts/BP_PPT.py -b data/pwmBP_human.txt \
@@ -91,6 +94,9 @@ python scripts/BP_PPT.py -b data/pwmBP_human.txt \
                  > ${output}/01-BP_Predictions/${transcript_file_prefix}.BP_predictions.txt
 
 
+end=`date +%s`
+time=$((end-start))
 
-
+echo "[ Finiahed in ${time} seoncds. ]"
+echo "[ Pipeline Finished Successfully! ]"
 # mkdir -p ${output}/02-MotifAnalysis
