@@ -56,34 +56,44 @@ slice() {
 	local gtf=$3
 	local outpath=$4
 	local prefix=$5
+	local training=$6
 
-	python3 scripts/intron_slicer.py -i $input \
-							 		 -a $gtf --training \
-									 > ${outpath}/${prefix}.introns.bed
+	if [ $training == "true" ]; then
+		python3 scripts/intron_slicer.py -i $input \
+								 		 -a $gtf \
+								 		 -o ${outpath}/${prefix}.introns.bed \
+								 		 --training \
+										 > ${outpath}/bp_training.bed
+
+		bedtools getfasta -fi $ref \
+					  	  -bed ${outpath}/bp_training.bed \
+					  	  -s -name -fo ${outpath}/bp_training.fasta
+	
+	else 
+		python3 scripts/intron_slicer.py -i $input \
+								 		 -a $gtf \
+								 		 -o ${outpath}/${prefix}.introns.bed
+	
+	fi
 
 	# Get Sequences
 	bedtools getfasta -fi $ref \
 					  -bed <(grep ".target" ${outpath}/${prefix}.introns.bed) \
 					  -s -name -fo ${outpath}/${prefix}.target.fasta
 
-	# Temporary File needs to be created because process substitution does 
-	#	not work and I have no idea why
-	grep -v ".target" ${outpath}/${prefix}.introns.bed \
-			> ${outpath}/${prefix}.training.bed
+	# Get Sequences
 	bedtools getfasta -fi $ref \
-					  -bed ${outpath}/${prefix}.training.bed \
-					  -s -name -fo ${outpath}/${prefix}.training.fasta
+					  -bed <(grep ".ppt" ${outpath}/${prefix}.introns.bed) \
+					  -s -name -fo ${outpath}/${prefix}.ppt.fasta	
 }
 
 
 freq() {
 
-	local prefix=$1
+	local training=$1
 	local outpath=$2
 
-	python3 scripts/get_freqy.py \
-				${outpath}/${prefix}.training.fasta \
-                > ${outpath}/${prefix}.training.octanucleotide_freqs.txt
+	python3 scripts/get_freqy.py ${training} > ${outpath}/bp_training.octanucleotide_freqs.txt
 }
 
 
@@ -94,7 +104,7 @@ predict() {
 	local outpath=$3
 
 	python scripts/BP_PPT.py -b data/pwmBP_human.txt \
-                 			 -p ${inpath}/${prefix}.training.octanucleotide_freqs.txt \
+                 			 -p ${inpath}/bp_training.octanucleotide_freqs.txt \
                  			 -i ${inpath}/${prefix}.target.fasta \
                  			 > ${outpath}/${prefix}.BP_predictions.txt
 
@@ -110,6 +120,48 @@ predict() {
 		fi
 	done < ${outpath}/${prefix}.BP_predictions.txt
 
+}
+
+
+homer() {
+
+	local group_1=$1
+	local group_2=$2
+	local outpath=$3
+
+	echo "[     ${group_1} vs ${group_2}... ]" 
+
+	# BP
+	if [ ! -s ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta ]; then
+		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta. ]"
+	
+	elif [ ! -s ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta ]; then
+		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta. ]"
+	
+	else
+		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs
+		findMotifs.pl ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta \
+					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP -len 7 \
+					  -fasta ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta \
+					  1> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs/findMotifs.stdout \
+					  2> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs/findMotifs.stderr
+	fi
+
+	# PPT
+	if [ ! -s ${outpath}/00-IntronFiles/${group_1}.ppt.fasta ]; then
+		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_1}.ppt.fasta. ]"
+	
+	elif [ ! -s ${outpath}/00-IntronFiles/${group_2}.ppt.fasta ]; then
+		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_2}.ppt.fasta. ]"
+	
+	else 
+		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs
+		findMotifs.pl ${outpath}/00-IntronFiles/${group_1}.ppt.fasta \
+					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT -len 17 \
+					  -fasta ${outpath}/00-IntronFiles/${group_2}.ppt.fasta \
+					  1> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs/findMotifs.stdout \
+					  2> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs/findMotifs.stderr
+	fi
 }
 
 ##########################################################3
@@ -135,17 +187,13 @@ prefix_2=`basename -s .txt $transcript_file_2`
 # Slice Introns
 echo "[   Slicing Sets of Introns... ]"
 mkdir -p ${output}/00-IntronFiles
-slice $transcript_file_1 $genome $annotation \
-		${output}/00-IntronFiles $prefix_1
-slice $transcript_file_2 $genome $annotation \
-		${output}/00-IntronFiles $prefix_2
+slice $transcript_file_1 $genome $annotation ${output}/00-IntronFiles $prefix_1 "true"
+slice $transcript_file_2 $genome $annotation ${output}/00-IntronFiles $prefix_2 "false"
 
 	
 # Calculate Octanucleotide Frequences
 echo "[   Calculating Octanucleotide Frequences... ]"
-freq $prefix_1 ${output}/00-IntronFiles 
-freq $prefix_2 ${output}/00-IntronFiles
-
+freq ${output}/00-IntronFiles/bp_training.fasta ${output}/00-IntronFiles 
 
 
 # Predict Branch Point Sequences
@@ -157,23 +205,8 @@ predict $prefix_2 ${output}/00-IntronFiles ${output}/01-BP_Predictions
 
 # Find Enriched Motifs
 echo "[   Finding Enriched Sequence Motifs... ]"
-mkdir -p ${output}/02-Motif_Analysis/${prefix_1}_v_${prefix_2}/logs
-mkdir -p ${output}/02-Motif_Analysis/${prefix_2}_v_${prefix_1}/logs
-
-# Group 1 vs Group 2
-findMotifs.pl ${output}/01-BP_Predictions/${prefix_1}.BP_predictions.fasta \
-			fasta ${output}/02-Motif_Analysis/${prefix_1}_v_${prefix_2} -len 7 \
-			-fasta ${output}/01-BP_Predictions/${prefix_2}.BP_predictions.fasta \
-			1> ${output}/02-Motif_Analysis/${prefix_1}_v_${prefix_2}/logs/findMotifs.stdout \
-			2> ${output}/02-Motif_Analysis/${prefix_1}_v_${prefix_2}/logs/findMotifs.stderr
-
-
-# Group 2 vs Group 1
-findMotifs.pl ${output}/01-BP_Predictions/${prefix_2}.BP_predictions.fasta \
-			fasta ${output}/02-Motif_Analysis/${prefix_2}_v_${prefix_1} -len 7 \
-			-fasta ${output}/01-BP_Predictions/${prefix_1}.BP_predictions.fasta \
-			1> ${output}/02-Motif_Analysis/${prefix_2}_v_${prefix_1}/logs/findMotifs.stdout \
-			2> ${output}/02-Motif_Analysis/${prefix_2}_v_${prefix_1}/logs/findMotifs.stderr
+homer $prefix_1 $prefix_2 $output
+homer $prefix_2 $prefix_1 $output
 
 
 end=`date +%s`

@@ -8,8 +8,9 @@ def parse_arguments():
 
 	parser.add_argument('-i', '--input', type=str, required=True, help='Path to file with list of transcripts of interest.')
 	parser.add_argument('-a', '--annotation', type=str, required=True, help='Path to annotation file (GTF format).')
-	parser.add_argument('-b', '--bp-window', type=int, default=100, required=False, help='Length of window for Branch Point sequences.')
+	parser.add_argument('-b', '--bp-window', type=int, default=200, required=False, help='Length of window for Branch Point sequences.')
 	parser.add_argument('-u', '--utr-window', type=int, default=150, required=False, help='Length of window for 5\' UTR.')
+	parser.add_argument('-o', '--output', type=str, required=False, help='Path to transcripts of interest output file.')
 	parser.add_argument('--training', action='store_true', help='Extract BPs, PPTs, and Background sequences for training.')
 
 	args = parser.parse_args()
@@ -80,109 +81,113 @@ https://academic.oup.com/bioinformatics/article/33/20/3166/3870482
 BPS              BACK                  PPT
 """
 
-def get_bed(input_file, bp_window, utr_window, training):
+def get_bed(input_file, bp_window, utr_window, output, training):
 
 	with open(input_file, "r") as fi:
 		lines = fi.readlines()
+		transcripts_of_interst = {}
 
-	for l in lines:
+		for l in lines:
+			if not l.startswith("#"): # just in case
+				transcripts_of_interst[l.strip()] = ""
 
-		if not l.startswith("#"): # just in case
-			transcript_id = l.strip()
+	for transcript_id in gtf_dict.keys():
 
-			if transcript_id in gtf_dict:
+		if len(gtf_dict[transcript_id]["introns"]) == 1:
+			# print('NOTICE: ' + transcript_id + ' has no introns', file=sys.stderr)
+			pass
 
-				if len(gtf_dict[transcript_id]["introns"]) == 1:
-					print('NOTICE: ' + transcript_id + ' has no introns', file=sys.stderr)
+		if gtf_dict[transcript_id]["strand"] == "+":
 
-				if gtf_dict[transcript_id]["strand"] == "+":
+			# Forward Strand
+			introns = gtf_dict[transcript_id]["introns"] # necessary copy, I am sorry
 
-					# Forward Strand
-					introns = gtf_dict[transcript_id]["introns"] # necessary copy, I am sorry
+			for x in range(0, len(introns)):
 
-					for x in range(0, len(introns)):
+				# can we please stop with the different coordinate system
+				#	or at least stop with open intervals, jc
 
-						# can we please stop with the different coordinate system
-						#	or at least stop with open intervals, jc
+				if (x % 2 == 0) or ((introns[x] - introns[x - 1]) < (bp_window + 100)):
+					continue
 
-						if (x % 2 == 0) or ((introns[x] - introns[x - 1]) < (bp_window + 100)):
-							continue
+				ppt = ""
 
-						# Potential Targets
-						print(gtf_dict[transcript_id]["chrom"],
-							  introns[x] - 1 - (10 + bp_window), 
-							  introns[x] - 1 - 10 + 1, #  bed files are half open
-							  str(transcript_id) + ".intron_" + str(x // 2) + ".target",
-							  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+				if training and ((introns[x + 1] - introns[x]) < 300):
 
-						if training and ((introns[x + 1] - introns[x]) < 300):
+					# Background Training
+					print(gtf_dict[transcript_id]["chrom"],
+						  introns[x] - 1 - (200), 
+						  introns[x] - 1 - (187) + 1, #  bed files are half open
+						  str(transcript_id) + ".intron_" + str(x // 2) + ".back",
+						  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
-							# # BPS Training
-							# print(gtf_dict[transcript_id]["chrom"],
-							# 	  introns[x] - 1 - (34), 
-							# 	  introns[x] - 1 - (21) + 1, #  bed files are half open
-							# 	  str(transcript_id) + ".intron_" + str(x // 2) + ".bps",
-							# 	  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+					# PPT Training
+					ppt = (gtf_dict[transcript_id]["chrom"] + "\t" +
+						  str(introns[x] - 1 - (16) - 2) + "\t" +
+						  str(introns[x] - 1 - 2 + 1) + "\t" +
+						  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt" + "\t" +
+						  "0" + "\t" + gtf_dict[transcript_id]["strand"])
+					print(ppt)
 
-							# Background Training
-							print(gtf_dict[transcript_id]["chrom"],
-								  introns[x] - 1 - (200), 
-								  introns[x] - 1 - (187) + 1, #  bed files are half open
-								  str(transcript_id) + ".intron_" + str(x // 2) + ".back",
-								  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+				# Potential Targets
+				if transcript_id in transcripts_of_interst:
+					transcripts_of_interst[transcript_id] = (gtf_dict[transcript_id]["chrom"] + "\t" +
+															 str(introns[x] - 1 - (10 + bp_window)) + "\t" +
+															 str(introns[x] - 1 - 10 + 1) + "\t" +
+															 str(transcript_id) + ".intron_" + str(x // 2) + ".target" + "\t" +
+															 "0" + "\t" + gtf_dict[transcript_id]["strand"])
+					if ppt != "":
+						transcripts_of_interst[transcript_id] += "\n" + ppt
+		else:
 
-							# PPT Training
-							print(gtf_dict[transcript_id]["chrom"],
-								  introns[x] - 1 - (16) - 2, 
-								  introns[x] - 1 - 2 + 1, #  bed files are half open
-								  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt",
-								  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+			# Reverse Strand
+			introns = gtf_dict[transcript_id]["introns"][::-1]
 
-				else:
+			for x in range(0, len(introns)):
 
-					# Reverse Strand
-					introns = gtf_dict[transcript_id]["introns"][::-1]
+				if (x % 2 == 0) or ((introns[x + 1] - introns[x]) < (bp_window + 100)):
+					continue
 
-					for x in range(0, len(introns)):
+				ppt = ""
 
-						if (x % 2 == 0) or ((introns[x + 1] - introns[x]) < (bp_window + 100)):
-							continue
+				if training and ((introns[x + 1] - introns[x]) < 300):
 
-						# Potential Targets
-						print(gtf_dict[transcript_id]["chrom"],
-							  introns[x] - 1 + 10,
-							  introns[x] - 1 + (10 + bp_window) + 1, # bed files are half open
-							  str(transcript_id) + ".intron_" + str(x // 2) + ".target",
-							  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+					# Background Training
+					print(gtf_dict[transcript_id]["chrom"],
+						  introns[x] - 1 + (187),
+						  introns[x] - 1 + (200) + 1,
+						  str(transcript_id) + ".intron_" + str(x // 2) + ".back",
+						  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
-						if training and ((introns[x + 1] - introns[x]) < 300):
+					# PPT Training
+					ppt = (gtf_dict[transcript_id]["chrom"] + "\t" +
+						  str(introns[x] - 1 + (3)) + "\t" +
+						  str(introns[x] - 1 + (16) + 1) + "\t" +
+						  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt" + "\t" +
+						  "0" + "\t" + gtf_dict[transcript_id]["strand"])
+					print(ppt)
 
-							# # BPS Training
-							# print(gtf_dict[transcript_id]["chrom"],
-							# 	  introns[x] - 1 + (21),
-							# 	  introns[x] - 1 + (34) + 1,
-							# 	  str(transcript_id) + ".intron_" + str(x // 2) + ".bps",
-							# 	  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
-
-							# Background Training
-							print(gtf_dict[transcript_id]["chrom"],
-								  introns[x] - 1 + (187),
-								  introns[x] - 1 + (200) + 1,
-								  str(transcript_id) + ".intron_" + str(x // 2) + ".back",
-								  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
-
-							# PPT Training
-							print(gtf_dict[transcript_id]["chrom"],
-								  introns[x] - 1 + (3),
-								  introns[x] - 1 + (16) + 1,
-								  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt",
-								  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
+				# Potential Targets
+				if transcript_id in transcripts_of_interst:
+					transcripts_of_interst[transcript_id] = (gtf_dict[transcript_id]["chrom"] + "\t" +
+															 str(introns[x] - 1 + 10) + "\t" +
+															 str(introns[x] - 1 + (10 + bp_window) + 1)  + "\t" + 
+															 str(transcript_id) + ".intron_" + str(x // 2) + ".target" + "\t" +
+															 "0"  + "\t" + gtf_dict[transcript_id]["strand"])
+					if ppt != "":
+						transcripts_of_interst[transcript_id] += "\n" + ppt
 
 
 
+	with open(output, "w") as fo:
+		for t in transcripts_of_interst.values():
+			fo.write(t + "\n")
+
+
+##############################################################
 if __name__ == "__main__":
 	
 	args = parse_arguments()
 
 	gtf_dict = parse_annotation(args.annotation)
-	get_bed(args.input, args.bp_window, args.utr_window, args.training)
+	get_bed(args.input, args.bp_window, args.utr_window, args.output, args.training)
