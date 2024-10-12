@@ -14,7 +14,7 @@ def weighted(cppt, cback, c_sum):
 	return (cppt * 2) / (cback * c_sum)
 
 
-with open("data/scPPT_human.txt", "r") as fi:
+with open(sys.argv[1], "r") as fi:
 	lines = fi.readlines()
 
 	bp_dict = {}
@@ -30,7 +30,7 @@ with open("data/scPPT_human.txt", "r") as fi:
 
 
 
-with open(sys.argv[1], "r") as fi:
+with open(sys.argv[2], "r") as fi:
 
 	lines = fi.readlines()
 

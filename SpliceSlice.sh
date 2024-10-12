@@ -46,6 +46,8 @@ if [ -z "$output" ]; then
 	output="SpliceSlice_Ouput"
 fi
 
+# Global
+script_dir=$(dirname "$0")
 
 ##########################################################3
 # Function 
@@ -59,20 +61,20 @@ slice() {
 	local training=$6
 
 	if [ $training == "true" ]; then
-		python3 scripts/intron_slicer.py -i $input \
-								 		 -a $gtf \
-								 		 -o ${outpath}/${prefix}.introns.bed \
-								 		 --training \
-										 > ${outpath}/bp_training.bed
+		python3 ${script_dir}/scripts/intron_slicer.py -i $input \
+												 		-a $gtf \
+												 		-o ${outpath}/${prefix}.introns.bed \
+												 		--training \
+														> ${outpath}/bp_training.bed
 
 		bedtools getfasta -fi $ref \
 					  	  -bed ${outpath}/bp_training.bed \
 					  	  -s -name -fo ${outpath}/bp_training.fasta
 	
 	else 
-		python3 scripts/intron_slicer.py -i $input \
-								 		 -a $gtf \
-								 		 -o ${outpath}/${prefix}.introns.bed
+		python3 ${script_dir}/scripts/intron_slicer.py -i $input \
+								 		 			   -a $gtf \
+								 		 			   -o ${outpath}/${prefix}.introns.bed
 	
 	fi
 
@@ -93,7 +95,9 @@ freq() {
 	local training=$1
 	local outpath=$2
 
-	python3 scripts/get_freqy.py ${training} > ${outpath}/bp_training.octanucleotide_freqs.txt
+	python3 ${script_dir}/scripts/get_freqy.py ${script_dir}/data/scPPT_human.txt \
+											   ${training} \
+											   > ${outpath}/bp_training.octanucleotide_freqs.txt
 }
 
 
@@ -103,10 +107,10 @@ predict() {
 	local inpath=$2
 	local outpath=$3
 
-	python scripts/BP_PPT.py -b data/pwmBP_human.txt \
-                 			 -p ${inpath}/bp_training.octanucleotide_freqs.txt \
-                 			 -i ${inpath}/${prefix}.target.fasta \
-                 			 > ${outpath}/${prefix}.BP_predictions.txt
+	python ${script_dir}/scripts/BP_PPT.py -b ${script_dir}/data/pwmBP_human.txt \
+                 			 			   -p ${inpath}/bp_training.octanucleotide_freqs.txt \
+                 						   -i ${inpath}/${prefix}.target.fasta \
+                 			 			   > ${outpath}/${prefix}.BP_predictions.txt
 
 
 	if [ -f ${outpath}/${prefix}.BP_predictions.fasta ]; then
