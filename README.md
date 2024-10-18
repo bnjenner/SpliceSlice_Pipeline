@@ -1,12 +1,13 @@
 # SpliceSlice Analysis Pipeline
 
+Pipeline for identification and sequence motif enrichment analysis of Branch Points and Polypyrimidine Tracts within introns. Method for extending BP_PPT.py to non-human organisms was modeled after this [publication](https://www.nature.com/articles/s42003-021-02725-7#Sec2), so extending this method to distantly related organisms should be approached with caution.
+
 Utilizes:
 * [Bedtools](http://bedtools.readthedocs.org/) 
 * [BP_PPT.py](https://github.com/zhqingit/BPP)
 * [HOMER](http://homer.ucsd.edu/homer/)
 * Bash and Python Scripts
 
-Method for extrapolating BP_PPT.py to non-human organisms was modeled after this [publication](https://www.nature.com/articles/s42003-021-02725-7#Sec2) 
 
 ### Installation
 1. Install [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) for your System 
@@ -35,5 +36,4 @@ Best to search how to do this on your specific system.
 SpliceSlice.sh [-h] transcript_list1 transcript_list2 genome annotaion [ -o output_directory ]
 ```
 
-Counts in 2nd column of the file indicate the number of times sequence will be duplicated by motif enrichment analysis.
-Input files "transcript_list" should be a plain text file where each line contains one valid transcript ID.
+Input files "transcript_list" should be a plain text file where each line contains one valid transcript ID and their quantification level (as an integer) separated by a tab.
