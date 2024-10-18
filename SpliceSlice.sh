@@ -68,7 +68,7 @@ slice() {
 														> ${outpath}/bp_training.bed
 
 		bedtools getfasta -fi $ref \
-					  	  -bed ${outpath}/bp_training.bed \
+					  	  -bed <(awk '!seen[$1,$2,$3,$6]++' ${outpath}/bp_training.bed) \
 					  	  -s -name -fo ${outpath}/bp_training.fasta
 	
 	else 
@@ -84,7 +84,7 @@ slice() {
 					  -s -name -fo ${outpath}/${prefix}.target.fasta
 
 	# Get Sequences
-	bedtools getfasta -fi $ref \
+	bedtools getfasta -fi $ref\
 					  -bed <(grep ".ppt" ${outpath}/${prefix}.introns.bed) \
 					  -s -name -fo ${outpath}/${prefix}.ppt.fasta	
 }
@@ -126,6 +126,23 @@ predict() {
 
 }
 
+dupe() {
+
+	local prefix=$1
+	local bp_path=$2
+	local ppt_path=$3
+
+	python3  ${script_dir}/scripts/get_duped.py \
+					${bp_path}/${prefix}.BP_predictions.fasta \
+					> ${bp_path}/${prefix}.BP_predictions.quant.fasta
+
+	python3  ${script_dir}/scripts/get_duped.py \
+					${ppt_path}/${prefix}.ppt.fasta \
+					> ${bp_path}/${prefix}.ppt.quant.fasta
+
+
+}
+
 
 homer() {
 
@@ -136,33 +153,35 @@ homer() {
 	echo "[     ${group_1} vs ${group_2}... ]" 
 
 	# BP
-	if [ ! -s ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta ]; then
-		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta. ]"
+	if [ ! -s ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta ]; then
+		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta. ]"
 	
-	elif [ ! -s ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta ]; then
-		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta. ]"
+	elif [ ! -s ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta ]; then
+		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta. ]"
 	
 	else
 		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs
-		findMotifs.pl ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta \
-					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP -len 7 \
-					  -fasta ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta \
+		findMotifs.pl ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta \
+					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP \
+					  -noweight -len 7 \
+					  -fastaBg ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta \
 					  1> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs/findMotifs.stdout \
 					  2> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs/findMotifs.stderr
 	fi
 
 	# PPT
-	if [ ! -s ${outpath}/00-IntronFiles/${group_1}.ppt.fasta ]; then
-		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_1}.ppt.fasta. ]"
+	if [ ! -s ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta ]; then
+		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta. ]"
 	
-	elif [ ! -s ${outpath}/00-IntronFiles/${group_2}.ppt.fasta ]; then
-		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_2}.ppt.fasta. ]"
+	elif [ ! -s ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta ]; then
+		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta. ]"
 	
 	else 
 		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs
-		findMotifs.pl ${outpath}/00-IntronFiles/${group_1}.ppt.fasta \
-					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT -len 17 \
-					  -fasta ${outpath}/00-IntronFiles/${group_2}.ppt.fasta \
+		findMotifs.pl ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta \
+					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT \
+					  -noweight -len 17 \
+					  -fastaBg ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta \
 					  1> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs/findMotifs.stdout \
 					  2> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs/findMotifs.stderr
 	fi
@@ -205,6 +224,10 @@ echo "[   Predicting Branch Point Sequences... ]"
 mkdir -p ${output}/01-BP_Predictions
 predict $prefix_1 ${output}/00-IntronFiles ${output}/01-BP_Predictions
 predict $prefix_2 ${output}/00-IntronFiles ${output}/01-BP_Predictions
+
+dupe $prefix_1 ${output}/01-BP_Predictions ${output}/00-IntronFiles
+dupe $prefix_2 ${output}/01-BP_Predictions ${output}/00-IntronFiles
+
 
 
 # Find Enriched Motifs

@@ -17,15 +17,6 @@ def parse_arguments():
 	return args
 
 
-'''
-	Only consider introns that are at least 100 bps larger than the basepair window itself
-	Locations:
-		- BP: begin at positions 10-100 () bps upstream of downstream exon
-			https://www.nature.com/articles/s42003-023-05513-7
-		- PPT: side note for later, should be like 20 bp long?
-
-'''
-
 ##############################################################
 # Parse Annotation File
 def parse_annotation(annotation_file):
@@ -75,21 +66,28 @@ def parse_annotation(annotation_file):
 
 ##############################################################
 # Generate Intron Bed File
+
 """
+BP Target zone is 10 to [W + 10] (W = window size) bps upstream of downstream exon start
+187–200 nt and 3–16nt.
+BACK           PPT
+
 https://academic.oup.com/bioinformatics/article/33/20/3166/3870482
-21–34 nt, 187–200 nt and 3–16 nt.
-BPS              BACK                  PPT
 """
 
 def get_bed(input_file, bp_window, utr_window, output, training):
 
 	with open(input_file, "r") as fi:
 		lines = fi.readlines()
-		transcripts_of_interst = {}
+		transcripts_of_interest = {}
 
 		for l in lines:
 			if not l.startswith("#"): # just in case
-				transcripts_of_interst[l.strip()] = ""
+				ID = l.split("\t")[0].strip()
+				score = l.split("\t")[1].strip()
+				transcripts_of_interest[ID] = score
+
+	output_directory = {}
 
 	for transcript_id in gtf_dict.keys():
 
@@ -105,7 +103,7 @@ def get_bed(input_file, bp_window, utr_window, output, training):
 			for x in range(0, len(introns)):
 
 				# can we please stop with the different coordinate system
-				#	or at least stop with open intervals, jc
+				#	or at least stop with open intervals
 
 				if (x % 2 == 0) or ((introns[x] - introns[x - 1]) < (bp_window + 100)):
 					continue
@@ -122,22 +120,26 @@ def get_bed(input_file, bp_window, utr_window, output, training):
 						  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
 					# PPT Training
-					ppt = (gtf_dict[transcript_id]["chrom"] + "\t" +
-						  str(introns[x] - 1 - (16) - 2) + "\t" +
-						  str(introns[x] - 1 - 2 + 1) + "\t" +
-						  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt" + "\t" +
-						  "0" + "\t" + gtf_dict[transcript_id]["strand"])
-					print(ppt)
+					ppt = [gtf_dict[transcript_id]["chrom"],
+						  str(introns[x] - 1 - (16) - 2),
+						  str(introns[x] - 1 - 2 + 1),
+						  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt",
+						  "0", gtf_dict[transcript_id]["strand"]]
+					print("\t".join(ppt))
 
 				# Potential Targets
-				if transcript_id in transcripts_of_interst:
-					transcripts_of_interst[transcript_id] = (gtf_dict[transcript_id]["chrom"] + "\t" +
-															 str(introns[x] - 1 - (10 + bp_window)) + "\t" +
-															 str(introns[x] - 1 - 10 + 1) + "\t" +
-															 str(transcript_id) + ".intron_" + str(x // 2) + ".target" + "\t" +
-															 "0" + "\t" + gtf_dict[transcript_id]["strand"])
+				if transcript_id in transcripts_of_interest:
+					output_directory[transcript_id] = (gtf_dict[transcript_id]["chrom"] + "\t" +
+														 str(introns[x] - 1 - (10 + bp_window)) + "\t" +
+														 str(introns[x] - 1 - 10 + 1) + "\t" +
+														 str(transcript_id) + ".intron_" + str(x // 2) + ".target" + 
+														 "." + transcripts_of_interest[transcript_id] + "\t" +
+														 "0" + "\t" + gtf_dict[transcript_id]["strand"])
 					if ppt != "":
-						transcripts_of_interst[transcript_id] += "\n" + ppt
+						ppt[3] = str(transcript_id) + ".intron_" + str(x // 2) + ".ppt" +  "." + transcripts_of_interest[transcript_id]
+						output_directory[transcript_id] += "\n" + "\t".join(ppt)
+
+
 		else:
 
 			# Reverse Strand
@@ -160,27 +162,30 @@ def get_bed(input_file, bp_window, utr_window, output, training):
 						  "0", gtf_dict[transcript_id]["strand"], sep = "\t")
 
 					# PPT Training
-					ppt = (gtf_dict[transcript_id]["chrom"] + "\t" +
-						  str(introns[x] - 1 + (3)) + "\t" +
-						  str(introns[x] - 1 + (16) + 1) + "\t" +
-						  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt" + "\t" +
-						  "0" + "\t" + gtf_dict[transcript_id]["strand"])
-					print(ppt)
+					ppt = [gtf_dict[transcript_id]["chrom"],
+						  str(introns[x] - 1 + (3)),
+						  str(introns[x] - 1 + (16) + 1),
+						  str(transcript_id) + ".intron_" + str(x // 2) + ".ppt",
+						  "0", gtf_dict[transcript_id]["strand"]]
+					print("\t".join(ppt))
 
 				# Potential Targets
-				if transcript_id in transcripts_of_interst:
-					transcripts_of_interst[transcript_id] = (gtf_dict[transcript_id]["chrom"] + "\t" +
-															 str(introns[x] - 1 + 10) + "\t" +
-															 str(introns[x] - 1 + (10 + bp_window) + 1)  + "\t" + 
-															 str(transcript_id) + ".intron_" + str(x // 2) + ".target" + "\t" +
-															 "0"  + "\t" + gtf_dict[transcript_id]["strand"])
+				if transcript_id in transcripts_of_interest:
+					output_directory[transcript_id] = (gtf_dict[transcript_id]["chrom"] + "\t" +
+														 str(introns[x] - 1 + 10) + "\t" +
+														 str(introns[x] - 1 + (10 + bp_window) + 1)  + "\t" + 
+														 str(transcript_id) + ".intron_" + str(x // 2) + ".target" + 
+														 "." + transcripts_of_interest[transcript_id] + "\t" +
+														 "0" + "\t" + gtf_dict[transcript_id]["strand"])
+					
 					if ppt != "":
-						transcripts_of_interst[transcript_id] += "\n" + ppt
+						ppt[3] = str(transcript_id) + ".intron_" + str(x // 2) + ".ppt" +  "." + transcripts_of_interest[transcript_id]
+						output_directory[transcript_id] += "\n" + "\t".join(ppt)
 
 
 
 	with open(output, "w") as fo:
-		for t in transcripts_of_interst.values():
+		for t in output_directory.values():
 			fo.write(t + "\n")
 
 

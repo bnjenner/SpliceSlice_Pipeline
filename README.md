@@ -35,4 +35,5 @@ Best to search how to do this on your specific system.
 SpliceSlice.sh [-h] transcript_list1 transcript_list2 genome annotaion [ -o output_directory ]
 ```
 
+Counts in 2nd column of the file indicate the number of times sequence will be duplicated by motif enrichment analysis.
 Input files "transcript_list" should be a plain text file where each line contains one valid transcript ID.
