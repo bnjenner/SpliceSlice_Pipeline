@@ -1,4 +1,4 @@
-import sys, argparse
+import argparse
 
 ##############################################################
 # Parse Commandline Arguments

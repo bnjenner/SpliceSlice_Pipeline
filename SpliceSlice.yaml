@@ -87,7 +87,7 @@ dependencies:
   - colorama=0.4.6=py311h06a4308_0
   - colorcet=3.1.0=py311h06a4308_0
   - comm=0.2.1=py311h06a4308_0
-  - conda=24.9.1=py311h06a4308_0
+  - conda=24.9.2=py311h06a4308_0
   - conda-build=24.9.0=py311h06a4308_0
   - conda-content-trust=0.2.0=py311h06a4308_0
   - conda-index=0.5.0=py311h06a4308_0
@@ -269,7 +269,7 @@ dependencies:
   - libzopfli=1.0.3=he6710b0_0
   - linkify-it-py=2.0.0=py311h06a4308_0
   - llvm-openmp=14.0.6=h9e868ea_0
-  - llvmlite=0.40.0=py311he621ea3_0
+  - llvmlite=0.43.0=py311h6a678d5_0
   - locket=1.0.0=py311h06a4308_0
   - lxml=5.2.1=py311hdbbb534_0
   - lz4=4.3.2=py311h5eee18b_0
@@ -315,10 +315,10 @@ dependencies:
   - notebook-shim=0.2.3=py311h06a4308_0
   - nspr=4.35=h6a678d5_0
   - nss=3.89.1=h6a678d5_0
-  - numba=0.57.1=py311h96b013e_0
+  - numba=0.60.0=py311h4bc866e_0
   - numexpr=2.8.7=py311h65dcdc2_0
-  - numpy=1.24.3=py311h08b1b3b_1
-  - numpy-base=1.24.3=py311hf175353_1
+  - numpy=1.26.4=py311h08b1b3b_0
+  - numpy-base=1.26.4=py311hf175353_0
   - numpydoc=1.7.0=py311h06a4308_0
   - oniguruma=6.9.7.1=h27cfd23_0
   - openjpeg=2.5.2=he7f1fd0_0
