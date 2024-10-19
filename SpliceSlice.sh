@@ -3,7 +3,7 @@
 ##########################################################3
 # Function to display help message
 usage() {
-    echo "Usage: $0 transcript_list1 transcript_list2 genome annotaion [ -o output_directory ]"
+    echo "Usage: $0  [ -o output_directory ] transcript_list1 transcript_list2 genome annotaion"
     echo
     echo "Positional arguments:"
     echo "  transcript_list1        Path to file with first list of transcripts."
@@ -36,7 +36,7 @@ shift $((OPTIND -1))
 
 # Check for positional arguments
 if [ $# -ne 4 ]; then
-    echo "Error: Three positional arguments are required." 1>&2
+    echo "Error: Four positional arguments are required." 1>&2
     usage
     exit 1
 fi
