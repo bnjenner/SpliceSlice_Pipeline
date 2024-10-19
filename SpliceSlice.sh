@@ -144,46 +144,55 @@ dupe() {
 }
 
 
-homer() {
+g_test() {
 
 	local group_1=$1
 	local group_2=$2
 	local outpath=$3
+	local test=true
 
 	echo "[     ${group_1} vs ${group_2}... ]" 
 
 	# BP
 	if [ ! -s ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta ]; then
 		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta. ]"
-	
-	elif [ ! -s ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta ]; then
-		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta. ]"
-	
-	else
-		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs
-		findMotifs.pl ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta \
-					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP \
-					  -noweight -len 7 \
-					  -fastaBg ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta \
-					  1> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs/findMotifs.stdout \
-					  2> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/logs/findMotifs.stderr
+		test=false
 	fi
+
+	if [ ! -s ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta ]; then
+		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta. ]"
+		test=false
+	fi
+	
+
+	if [ $test == "true" ]; then
+		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP
+		python3 ${script_dir}/scripts/significance_test.py \
+					-t ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta \
+					-b ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta \
+					-o ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/${group_1}_v_${group_2}.BP_significance
+	fi
+
+
+	test=true
 
 	# PPT
 	if [ ! -s ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta ]; then
 		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta. ]"
+		test=false
+	fi
 	
-	elif [ ! -s ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta ]; then
+	if [ ! -s ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta ]; then
 		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta. ]"
-	
-	else 
-		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs
-		findMotifs.pl ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta \
-					  fasta ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT \
-					  -noweight -len 17 \
-					  -fastaBg ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta \
-					  1> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs/findMotifs.stdout \
-					  2> ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/logs/findMotifs.stderr
+		test=false
+	fi
+
+	if [ $test == "true" ]; then
+		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT
+		python3 ${script_dir}/scripts/significance_test.py \
+					-t ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta \
+					-b ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta \
+					-o ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/${group_1}_v_${group_2}.PPT_significance
 	fi
 }
 
@@ -230,11 +239,9 @@ dupe $prefix_2 ${output}/01-BP_Predictions ${output}/00-IntronFiles
 
 
 
-# Find Enriched Motifs
-echo "[   Finding Enriched Sequence Motifs... ]"
-homer $prefix_1 $prefix_2 $output
-homer $prefix_2 $prefix_1 $output
-
+# Perform Statsitical Tests
+echo "[   Performing Statistical Testing... ]"
+g_test $prefix_1 $prefix_2 $output
 
 end=`date +%s`
 time=$((end-start))

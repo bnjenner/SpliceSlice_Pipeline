@@ -1,11 +1,12 @@
 # SpliceSlice Analysis Pipeline
 
-Pipeline for identification and sequence motif enrichment analysis of Branch Points and Polypyrimidine Tracts within introns. Method for extending BP_PPT.py to non-human organisms was modeled after this [publication](https://www.nature.com/articles/s42003-021-02725-7#Sec2), so extending this method to distantly related organisms should be approached with caution.
+Pipeline for identification and statistical analysis of Branch Point and Polypyrimidine Tract sequences within introns. Method for extending BP_PPT.py to non-human organisms was modeled after this [publication](https://www.nature.com/articles/s42003-021-02725-7#Sec2), so extending this method to distantly related organisms should be approached with caution.
 
 Utilizes:
 * [Bedtools](http://bedtools.readthedocs.org/) 
 * [BP_PPT.py](https://github.com/zhqingit/BPP)
-* [HOMER](http://homer.ucsd.edu/homer/)
+* [Scipy](https://docs.scipy.org/doc/scipy/index.html)
+* [Logomaker](https://logomaker.readthedocs.io/en/latest/)
 * Bash and Python Scripts
 
 
