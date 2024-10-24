@@ -2,8 +2,9 @@ import argparse
 import pandas as pd
 import numpy as np
 import logomaker
+import math
 import matplotlib.pyplot as plt
-from scipy.stats import chi2
+from scipy import stats
 
 ##############################################################
 # Parse Commandline Arguments
@@ -34,7 +35,16 @@ def get_pwm(file):
 				for i in range(n):
 					pwm.loc[seq[i], i] += 1
 
-		return pwm
+		return pwm 
+
+
+def consensus(pwm):
+
+	nucleotides = ['A', 'C', 'G', 'T']
+	max_indices = np.argmax(pwm, axis=0)
+	consensus = ''.join([nucleotides[idx] for idx in max_indices])
+
+	return consensus
 
 
 def make_logo(pwm, file, sequence):
@@ -49,20 +59,19 @@ def make_logo(pwm, file, sequence):
 	plt.savefig(file + "." + sequence + ".png")
 
 
-def g_test(target, background):
 
-	observed = np.array([target, background])
 
-	total = observed.sum()
-	row_totals = np.sum(observed, axis=1)
-	col_totals = np.sum(observed, axis=0)
+def KL_divergence(target, background):
+	return stats.entropy(target, background)
 
-	expected = np.outer(row_totals, col_totals) / total
-	g_stat = 2 * np.sum(observed * np.log(observed / expected))
-	df = (observed.shape[0] - 1) * (observed.shape[1] - 1)
-	p_value = chi2.cdf(g_stat, df)
 
-	return g_stat, p_value
+def LRT(observed, expected):
+
+	lrt = 2 * np.sum(observed * np.log(observed / expected))
+	df = len(observed) - 1
+	p_value = 1 - stats.chi2.cdf(lrt, df)
+
+	return lrt, p_value
 
 
 
@@ -74,14 +83,23 @@ if __name__ == "__main__":
 	target_pwm = get_pwm(args.target)
 	background_pwm = get_pwm(args.background)
 
+	con_target = consensus(target_pwm)
+	con_background = consensus(background_pwm)
+
+
 	logo_target = make_logo(target_pwm.T, args.output, "Target")
-	logo_target = make_logo(target_pwm.T, args.output, "Background")
+	logo_target = make_logo(background_pwm.T, args.output, "Background")
 
-	with open(args.output + ".g_test.txt", "w") as fo:
+	kl = KL_divergence(np.array(target_pwm).flatten(), np.array(background_pwm).flatten())
+	lrt, p_value = LRT(np.array(target_pwm).flatten(), np.array(background_pwm).flatten())
 
-		fo.write("Position\tG-Statistic\tP-Value\n")
-		for i in range(target_pwm.shape[1]):
+	print("Target_Consensus\tBackground_Consensus\tKL\tLRT\tP-Value")
+	print(con_target + "\t" + con_background + "\t" + str(kl) + "\t" + str(lrt) + "\t" + str(p_value))
+	# with open(args.output + ".g_test.txt", "w") as fo:
 
-			g_stat, pval = g_test(target_pwm[i], background_pwm[i])
-			fo.write(str(i) + "\t" + str(g_stat) + "\t" + str(pval) + "\n")
+	# 	fo.write("Position\tG-Statistic\tP-Value\n")
+	# 	for i in range(target_pwm.shape[1]):
+
+	# 		g_stat, pval = g_test(target_pwm[i], background_pwm[i])
+	# 		fo.write(str(i) + "\t" + str(g_stat) + "\t" + str(pval) + "\n")
 
