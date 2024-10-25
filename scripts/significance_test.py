@@ -1,6 +1,8 @@
 import argparse
 import pandas as pd
 import numpy as np
+import itertools
+import string
 import logomaker
 import math
 import matplotlib.pyplot as plt
@@ -20,11 +22,19 @@ def parse_arguments():
 	return args
 
 
-def get_pwm(file):
+def generate_3mers():
+	combinations = itertools.product(["A", "C", "G", "T"], repeat=2)
+	kmers = [''.join(combination) + "A" for combination in combinations]
+	return kmers
+
+
+def get_counts(file, kmers):
 
 	with open(file) as fi:
 
 		lines =	fi.readlines()
+
+		kmer_counts = pd.Series(1, index=kmers)
 
 		n = len(lines[1].strip())
 		data = np.ones((4, n)) # avoid weird zero division errors
@@ -32,10 +42,13 @@ def get_pwm(file):
 
 		for seq in lines:
 			if not seq.startswith('>'):
+
+				if seq[3:6] in kmer_counts:
+					kmer_counts.loc[seq[3:6]] += 1
 				for i in range(n):
 					pwm.loc[seq[i], i] += 1
 
-		return pwm 
+		return pwm, kmer_counts
 
 
 def consensus(pwm):
@@ -68,14 +81,16 @@ def chisquare_test(observed, background):
 	return stats.chisquare(observed, expected)
 
 
-
 ##############################################################
 if __name__ == "__main__":
 	
 	args = parse_arguments()
 
-	target_pwm = get_pwm(args.target)
-	background_pwm = get_pwm(args.background)
+	kmers = generate_3mers()
+
+
+	target_pwm, target_kmers = get_counts(args.target, kmers)
+	background_pwm, background_kmers = get_counts(args.background, kmers)
 
 	con_target = consensus(target_pwm)
 	con_background = consensus(background_pwm)
@@ -83,11 +98,12 @@ if __name__ == "__main__":
 	make_logo(target_pwm.T, args.output, "Target")
 	make_logo(background_pwm.T, args.output, "Background")
 
-	flat_target = np.array(target_pwm).flatten()
-	flat_background = np.array(background_pwm).flatten()
 
-	kl = KL_divergence(flat_target, flat_background)
-	stat, p_value = chisquare_test(flat_target, flat_background)
+	kl = KL_divergence(target_kmers, background_kmers)
+	stat, p_value = chisquare_test(target_kmers, background_kmers)
+	stat, p_value = fisher_test(np.array(target_kmers), np.array(background_kmers))
+
+	print(stat, p_value)
 
 	with open(args.output + ".results.txt", "w") as fo:
 		fo.write("Target_Consensus\tBackground_Consensus\tKL\tX2_Stat\tP_Value\n")
