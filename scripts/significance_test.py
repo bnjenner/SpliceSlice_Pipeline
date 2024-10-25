@@ -59,19 +59,13 @@ def make_logo(pwm, file, sequence):
 	plt.savefig(file + "." + sequence + ".png")
 
 
-
-
 def KL_divergence(target, background):
 	return stats.entropy(target, background)
 
 
-def LRT(observed, expected):
-
-	lrt = 2 * np.sum(observed * np.log(observed / expected))
-	df = len(observed) - 1
-	p_value = 1 - stats.chi2.cdf(lrt, df)
-
-	return lrt, p_value
+def chisquare_test(observed, background):
+	expected = (background / sum(background)) *  sum(observed)
+	return stats.chisquare(observed, expected)
 
 
 
@@ -86,20 +80,16 @@ if __name__ == "__main__":
 	con_target = consensus(target_pwm)
 	con_background = consensus(background_pwm)
 
+	make_logo(target_pwm.T, args.output, "Target")
+	make_logo(background_pwm.T, args.output, "Background")
 
-	logo_target = make_logo(target_pwm.T, args.output, "Target")
-	logo_target = make_logo(background_pwm.T, args.output, "Background")
+	flat_target = np.array(target_pwm).flatten()
+	flat_background = np.array(background_pwm).flatten()
 
-	kl = KL_divergence(np.array(target_pwm).flatten(), np.array(background_pwm).flatten())
-	lrt, p_value = LRT(np.array(target_pwm).flatten(), np.array(background_pwm).flatten())
+	kl = KL_divergence(flat_target, flat_background)
+	stat, p_value = chisquare_test(flat_target, flat_background)
 
-	print("Target_Consensus\tBackground_Consensus\tKL\tLRT\tP-Value")
-	print(con_target + "\t" + con_background + "\t" + str(kl) + "\t" + str(lrt) + "\t" + str(p_value))
-	# with open(args.output + ".g_test.txt", "w") as fo:
-
-	# 	fo.write("Position\tG-Statistic\tP-Value\n")
-	# 	for i in range(target_pwm.shape[1]):
-
-	# 		g_stat, pval = g_test(target_pwm[i], background_pwm[i])
-	# 		fo.write(str(i) + "\t" + str(g_stat) + "\t" + str(pval) + "\n")
-
+	with open(args.output + ".results.txt", "w") as fo:
+		fo.write("Target_Consensus\tBackground_Consensus\tKL\tX2_Stat\tP_Value\n")
+		fo.write(con_target + "\t" + con_background + "\t" + str(kl) + "\t" + str(stat) + "\t" + str(p_value) + "\n")
+	
