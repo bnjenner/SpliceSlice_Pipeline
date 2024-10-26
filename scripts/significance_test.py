@@ -1,13 +1,8 @@
 import argparse
 import pandas as pd
 import numpy as np
-import itertools
-import string
 import logomaker
-import math
 import random
-from collections import Counter
-import matplotlib.pyplot as plt
 from scipy import stats
 
 ##############################################################
@@ -134,8 +129,6 @@ if __name__ == "__main__":
 	# Create Logos
 	make_logo(target_pwm.T, args.output, "Target")
 	make_logo(background_pwm.T, args.output, "Background")
-
-	print(p_value)
 
 	with open(args.output + ".results.txt", "w") as fo:
 		fo.write("Target_Consensus\tBackground_Consensus\tKL\tSim_KL_Mean\tP_Value\n")

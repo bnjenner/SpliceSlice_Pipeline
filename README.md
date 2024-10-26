@@ -1,6 +1,6 @@
 # SpliceSlice Analysis Pipeline
 
-Pipeline for identification and statistical analysis of Branch Point and Polypyrimidine Tract sequences within introns. Method for extending BP_PPT.py to non-human organisms was modeled after this [publication](https://www.nature.com/articles/s42003-021-02725-7#Sec2), so extending this method to distantly related organisms should be approached with caution.
+Pipeline for identification and statistical analysis of Branch Point and Polypyrimidine Tract sequences within introns. Method for extending BP_PPT.py to non-human organisms was modeled after this [publication](https://www.nature.com/articles/s42003-021-02725-7#Sec2), so extending this method to distantly related organisms should be approached with caution. Statistical analysis consists of a permutation test where the test statistic is the Kullback-Leibler (KL) divergence. Position weight matricies are also used to generate sequence logos for the identified sequences within each treatment.
 
 Utilizes:
 * [Bedtools](http://bedtools.readthedocs.org/) 
