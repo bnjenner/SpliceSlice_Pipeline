@@ -24,43 +24,30 @@ def parse_arguments():
 	return args
 
 
-
-def generate_seq(pwm, length):
-	seq = ''
-	for i in range(length):
-		probs = pwm.iloc[:, i]
-		seq += random.choices(population=['A', 'C', 'G', 'T'], weights=probs, k=1)[0]
-
-	return seq
-
-def generate_3mers():
-	combinations = itertools.product(["A", "C", "G", "T"], repeat=2)
-	kmers = [''.join(combination) + "A" for combination in combinations]
-	return kmers
-
-
-def get_counts(file, kmers):
+def read_fasta(file):
 
 	with open(file) as fi:
-
 		lines =	fi.readlines()
-
 		sequences = []
-		kmer_counts = pd.Series(1, index=kmers)
-
-		n = len(lines[1].strip())
-		data = np.ones((4, n)) # avoid weird zero division errors
-		pwm = pd.DataFrame(data, index=['A', 'C', 'G', 'T'], columns=range(n))
-
+		
 		for seq in lines:
 			if not seq.startswith('>'):
 				sequences.append(seq.strip())
-				if seq[3:6] in kmer_counts:
-					kmer_counts.loc[seq[3:6]] += 1
-				for i in range(n):
-					pwm.loc[seq[i], i] += 1
+				
+		return sequences
 
-		return pwm / sum(pwm), kmer_counts, sequences
+
+def get_pwm(sequences):
+
+	n = len(sequences[0])
+	data = np.ones((4, n)) # pseudocount
+	pwm = pd.DataFrame(data, index=['A', 'C', 'G', 'T'], columns=range(n))
+
+	for seq in sequences:
+		for i in range(n):
+			pwm.loc[seq[i], i] += 1
+
+	return pwm / pwm.sum()
 
 
 def consensus(pwm):
@@ -84,16 +71,36 @@ def make_logo(pwm, file, sequence):
 	plt.savefig(file + "." + sequence + ".png")
 
 
-def score_seq(pwm, seq):
-	score = 0
-	for i in range(len(seq)):
-		score += math.log(pwm.loc[seq[i], i])
-
-	return score
-
-
 def KL_divergence(target, background):
-	return stats.entropy(target, background)
+	kl_sum = 0
+	for i in range(len(target.loc["A"])):
+		kl_sum += stats.entropy(target.iloc[:,i], background.iloc[:,i])
+	return kl_sum
+
+
+def permutation_test(target_sequences, background_sequences, test_kl, iterations):
+
+	counts = 0
+	mean_sum = 0
+	iterations = 100
+	min_num = max(len(target_sequences), len(background_sequences))
+	combined_sequences = target_sequences + background_sequences
+
+	# Permutation
+	for i in range(iterations):
+
+		# Is this appropriate if list size is unequal?
+		# Do I have enough data for this? How much sampling is approparite for this dataset?
+		# sample witout replacement
+		rand_target = random.sample(combined_sequences, min_num)
+		rand_background = random.sample(combined_sequences, min_num)
+		kl = KL_divergence(get_pwm(rand_target), get_pwm(rand_background))
+		mean_sum += kl
+		if test_kl <= kl:
+			counts += 1
+
+	return counts / iterations, mean_sum / iterations
+
 
 
 def chisquare_test(observed, background):
@@ -110,37 +117,27 @@ if __name__ == "__main__":
 	
 	args = parse_arguments()
 
-	kmers = generate_3mers()
 
+	target_sequences = read_fasta(args.target)
+	background_sequences = read_fasta(args.background)
 
-	target_pwm, target_kmers, target_sequences = get_counts(args.target, kmers)
-	background_pwm, background_kmers, _ = get_counts(args.background, kmers)
+	target_pwm = get_pwm(target_sequences)
+	background_pwm = get_pwm(background_sequences)
+	test_kl = KL_divergence(target_pwm, background_pwm)
 
+	p_value, sim_kl_mean = permutation_test(target_sequences, background_sequences, test_kl, 100)
+
+	# Create Consensus Sequence
 	con_target = consensus(target_pwm)
 	con_background = consensus(background_pwm)
 
+	# Create Logos
 	make_logo(target_pwm.T, args.output, "Target")
 	make_logo(background_pwm.T, args.output, "Background")
 
-	# Monte Carlo Simulation
-	num_seqs = 1000
-	length_seq = background_pwm.shape[1]
-	target_gen_seqs = [generate_seq(target_pwm, length_seq) for i in range(num_seqs)]
-	background_gen_seqs = [generate_seq(background_pwm, length_seq) for i in range(num_seqs)]
+	print(p_value)
 
-
-	target_scores = [score_seq(background_pwm, seq) for seq in target_gen_seqs]
-	background_scores = [score_seq(background_pwm, seq) for seq in background_gen_seqs]
-
-	stat, p_value = mann_whitney_test(target_scores, background_scores)
-
-	# kl = KL_divergence(target_kmers, background_kmers)
-	# stat, p_value = chisquare_test(target_kmers, background_kmers)
-	# stat, p_value = fisher_test(np.array(target_kmers), np.array(background_kmers))
-
-	# print(stat, p_value)
-
-	# with open(args.output + ".results.txt", "w") as fo:
-	# 	fo.write("Target_Consensus\tBackground_Consensus\tKL\tX2_Stat\tP_Value\n")
-	# 	fo.write(con_target + "\t" + con_background + "\t" + str(kl) + "\t" + str(stat) + "\t" + str(p_value) + "\n")
-	# 
+	with open(args.output + ".results.txt", "w") as fo:
+		fo.write("Target_Consensus\tBackground_Consensus\tKL\tSim_KL_Mean\tP_Value\n")
+		fo.write(con_target + "\t" + con_background + "\t" + str(test_kl) + "\t" + str(sim_kl_mean) + "\t" + str(p_value) + "\n")
+	

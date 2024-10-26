@@ -144,7 +144,7 @@ dupe() {
 }
 
 
-g_test() {
+perm_test() {
 
 	local group_1=$1
 	local group_2=$2
@@ -171,28 +171,6 @@ g_test() {
 					-t ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta \
 					-b ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta \
 					-o ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/${group_1}_v_${group_2}.BP_significance
-	fi
-
-
-	test=true
-
-	# PPT
-	if [ ! -s ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta ]; then
-		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_1}.ppt.quant.fasta. ]"
-		test=false
-	fi
-	
-	if [ ! -s ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta ]; then
-		echo "[       No PPT Predictions in ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta. ]"
-		test=false
-	fi
-
-	if [ $test == "true" ]; then
-		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT
-		python3 ${script_dir}/scripts/significance_test.py \
-					-t ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta \
-					-b ${outpath}/00-IntronFiles/${group_2}.ppt.quant.fasta \
-					-o ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/${group_1}_v_${group_2}.PPT_significance
 	fi
 }
 
@@ -241,7 +219,7 @@ dupe $prefix_2 ${output}/01-BP_Predictions ${output}/00-IntronFiles
 
 # Perform Statsitical Tests
 echo "[   Performing Statistical Testing... ]"
-g_test $prefix_1 $prefix_2 $output
+perm_test $prefix_1 $prefix_2 $output
 
 end=`date +%s`
 time=$((end-start))
