@@ -85,8 +85,6 @@ def permutation_test(target_sequences, background_sequences, test_kl, iterations
 	counts = 0
 	mean_sum = 0
 	len_target = len(target_sequences)
-	len_background = len(background_sequences)
-	min_num = max(len(target_sequences), len(background_sequences))
 	combined_sequences = target_sequences + background_sequences
 
 	# Permutation
@@ -111,14 +109,13 @@ def permutation_test(target_sequences, background_sequences, test_kl, iterations
 	return counts / iterations, mean_sum / iterations
 
 
+# def chisquare_test(observed, background):
+# 	expected = (background / sum(background)) *  sum(observed)
+# 	return stats.chisquare(observed, expected)
 
-def chisquare_test(observed, background):
-	expected = (background / sum(background)) *  sum(observed)
-	return stats.chisquare(observed, expected)
 
-
-def mann_whitney_test(target_scores, generated_scores):
-	return stats.mannwhitneyu(target_scores, background_scores)
+# def mann_whitney_test(target_scores, generated_scores):
+# 	return stats.mannwhitneyu(target_scores, background_scores)
 
 
 ##############################################################

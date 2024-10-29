@@ -221,6 +221,11 @@ dupe $prefix_2 ${output}/01-BP_Predictions ${output}/00-IntronFiles
 echo "[   Performing Statistical Testing... ]"
 perm_test $prefix_1 $prefix_2 $output
 
+# I think the perm_test for PPT needs to change since BP_PPT.py considers the 20 bp
+#	immediately downstream of the BP prediction.
+#	ALSO (side note): score is relative and site in the region with highest score is
+#	reported, no filtering per se.
+
 end=`date +%s`
 time=$((end-start))
 
