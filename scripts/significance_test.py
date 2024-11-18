@@ -73,7 +73,6 @@ def make_logo(pwm, file, sequence):
 
 def KL_divergence(target, background):
 	kl_sum = 0
-	
 	for i in range(len(target) // 4):
 		kl_sum += stats.entropy(target[(i * 4):(i * 4) + 5], background[(i * 4):(i * 4) + 5])
 	
@@ -107,15 +106,6 @@ def permutation_test(target_sequences, background_sequences, test_kl, iterations
 			counts += 1
 
 	return counts / iterations, mean_sum / iterations
-
-
-# def chisquare_test(observed, background):
-# 	expected = (background / sum(background)) *  sum(observed)
-# 	return stats.chisquare(observed, expected)
-
-
-# def mann_whitney_test(target_scores, generated_scores):
-# 	return stats.mannwhitneyu(target_scores, background_scores)
 
 
 ##############################################################

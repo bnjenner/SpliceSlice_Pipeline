@@ -70,12 +70,12 @@ slice() {
 		bedtools getfasta -fi $ref \
 					  	  -bed <(awk '!seen[$1,$2,$3,$6]++' ${outpath}/bp_training.bed) \
 					  	  -s -name -fo ${outpath}/bp_training.fasta
-	
+
 	else 
 		python3 ${script_dir}/scripts/intron_slicer.py -i $input \
 								 		 			   -a $gtf \
 								 		 			   -o ${outpath}/${prefix}.introns.bed
-	
+
 	fi
 
 	# Get Sequences
@@ -225,6 +225,8 @@ perm_test $prefix_1 $prefix_2 $output
 #	immediately downstream of the BP prediction.
 #	ALSO (side note): score is relative and site in the region with highest score is
 #	reported, no filtering per se.
+
+# WE NEED TO UPDATE WHAT PPT SEQUENCES WE ARE ACTUALLY TESTING :)
 
 end=`date +%s`
 time=$((end-start))
