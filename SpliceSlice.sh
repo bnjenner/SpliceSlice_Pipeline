@@ -106,6 +106,7 @@ predict() {
 	local prefix=$1
 	local inpath=$2
 	local outpath=$3
+	local genome=$4
 
 	python ${script_dir}/scripts/BP_PPT.py -b ${script_dir}/data/pwmBP_human.txt \
                  			 			   -p ${inpath}/bp_training.octanucleotide_freqs.txt \
@@ -123,6 +124,17 @@ predict() {
 			echo $line | cut -d ' ' -f 2 >> ${outpath}/${prefix}.BP_predictions.fasta
 		fi
 	done < ${outpath}/${prefix}.BP_predictions.txt
+
+	if [ ! -s /path-to-file/filename.txt ]; then
+		python3 ${script_dir}/scripts/get_predicted_ppt.py \
+				${outpath}/${prefix}.BP_predictions.txt \
+				${inpath}/${prefix}.target.fasta \
+				> ${outpath}/${prefix}.PPT_predictions.bed
+
+		bedtools getfasta -fi $genome \
+						  -bed ${outpath}/${prefix}.PPT_predictions.bed \
+						  -s -name -fo ${outpath}/${prefix}.PPT_predictions.fasta
+	fi
 
 }
 
@@ -153,24 +165,55 @@ perm_test() {
 
 	echo "[     ${group_1} vs ${group_2}... ]" 
 
+	# loacl group1_bp="${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta"
+	# local group2_bp="${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta"
+	local group1_bp="${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta"
+	local group2_bp="${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta"
+
 	# BP
-	if [ ! -s ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta ]; then
-		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta. ]"
+	if [ ! -s ${group1_bp} ]; then
+		echo "[       No BP Predictions in ${group1_bp}. ]"
 		test=false
 	fi
 
-	if [ ! -s ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta ]; then
-		echo "[       No BP Predictions in ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta. ]"
+	if [ ! -s ${group2_bp} ]; then
+		echo "[       No BP Predictions in ${group2_bp}. ]"
 		test=false
 	fi
 	
 
 	if [ $test == "true" ]; then
 		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP
+		
 		python3 ${script_dir}/scripts/significance_test.py \
-					-t ${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta \
-					-b ${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta \
+					-t ${group1_bp} -b ${group2_bp} \
 					-o ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/BP/${group_1}_v_${group_2}.BP_significance
+	fi
+
+
+	# loacl group1_PPT="${outpath}/01-BP_Predictions/${group_1}.PPT_predictions.quant.fasta"
+	# local group2_PPT="${outpath}/01-BP_Predictions/${group_2}.PPT_predictions.quant.fasta"
+	local group1_ppt="${outpath}/01-BP_Predictions/${group_1}.PPT_predictions.fasta"
+	local group2_ppt="${outpath}/01-BP_Predictions/${group_2}.PPT_predictions.fasta"
+
+	# PPT
+	if [ ! -s ${group1_ppt} ]; then
+		echo "[       No PPT Predictions in ${group1_ppt}. ]"
+		test=false
+	fi
+
+	if [ ! -s ${group2_ppt} ]; then
+		echo "[       No PPT Predictions in ${group2_ppt}. ]"
+		test=false
+	fi
+	
+
+	if [ $test == "true" ]; then
+		mkdir -p ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT
+
+		python3 ${script_dir}/scripts/significance_test.py \
+					-t ${group1_ppt} -b ${group2_ppt} \
+					-o ${outpath}/02-Motif_Analysis/${group_1}_v_${group_2}/PPT/${group_1}_v_${group_2}.PPT_significance
 	fi
 }
 
@@ -209,24 +252,17 @@ freq ${output}/00-IntronFiles/bp_training.fasta ${output}/00-IntronFiles
 # Predict Branch Point Sequences
 echo "[   Predicting Branch Point Sequences... ]"
 mkdir -p ${output}/01-BP_Predictions
-predict $prefix_1 ${output}/00-IntronFiles ${output}/01-BP_Predictions
-predict $prefix_2 ${output}/00-IntronFiles ${output}/01-BP_Predictions
+predict $prefix_1 ${output}/00-IntronFiles ${output}/01-BP_Predictions $genome
+predict $prefix_2 ${output}/00-IntronFiles ${output}/01-BP_Predictions $genome
 
-dupe $prefix_1 ${output}/01-BP_Predictions ${output}/00-IntronFiles
-dupe $prefix_2 ${output}/01-BP_Predictions ${output}/00-IntronFiles
-
+#dupe $prefix_1 ${output}/01-BP_Predictions ${output}/00-IntronFiles
+#dupe $prefix_2 ${output}/01-BP_Predictions ${output}/00-IntronFiles
 
 
 # Perform Statsitical Tests
 echo "[   Performing Statistical Testing... ]"
 perm_test $prefix_1 $prefix_2 $output
 
-# I think the perm_test for PPT needs to change since BP_PPT.py considers the 20 bp
-#	immediately downstream of the BP prediction.
-#	ALSO (side note): score is relative and site in the region with highest score is
-#	reported, no filtering per se.
-
-# WE NEED TO UPDATE WHAT PPT SEQUENCES WE ARE ACTUALLY TESTING :)
 
 end=`date +%s`
 time=$((end-start))
