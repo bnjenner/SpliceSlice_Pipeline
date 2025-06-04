@@ -10,131 +10,168 @@ from scipy import stats
 # Parse Commandline Arguments
 def parse_arguments():
 
-	parser = argparse.ArgumentParser(description='This is a sample help message for a script.')
+    parser = argparse.ArgumentParser(
+        description="This is a sample help message for a script."
+    )
 
-	parser.add_argument('-t', '--target', type=str, required=True, help='Path to file of target sequences.')
-	parser.add_argument('-b', '--background', type=str, required=True, help='Path to file of target sequences.')
-	parser.add_argument('-o', '--output', type=str, required=True, help='Prefix for output file.')
+    parser.add_argument(
+        "-t",
+        "--target",
+        type=str,
+        required=True,
+        help="Path to file of target sequences.",
+    )
+    parser.add_argument(
+        "-b",
+        "--background",
+        type=str,
+        required=True,
+        help="Path to file of target sequences.",
+    )
+    parser.add_argument(
+        "-o", "--output", type=str, required=True, help="Prefix for output file."
+    )
 
-	args = parser.parse_args()
-	return args
+    args = parser.parse_args()
+    return args
 
 
 def read_fasta(file):
 
-	with open(file) as fi:
-		lines =	fi.readlines()
-		sequences = []
-		
-		for seq in lines:
-			if not seq.startswith('>'):
-				sequences.append(seq.strip())
-				
-		return sequences
+    with open(file) as fi:
+        lines = fi.readlines()
+        sequences = []
+
+        for seq in lines:
+            if not seq.startswith(">"):
+                sequences.append(seq.strip())
+
+        return sequences
 
 
 def get_pwm(sequences):
 
-	base_index = {"A": 0, "C": 1, "G": 2, "T": 3}
+    base_index = {"A": 0, "C": 1, "G": 2, "T": 3}
 
-	n = len(sequences[0])
-	pwm = np.ones(4 * n) # pseudocount
+    n = len(sequences[0])
+    pwm = np.ones(4 * n)  # pseudocount
 
-	for seq in sequences:
-		for i in range(n):
-			pwm[(i * 4) + base_index[seq[i]]] += 1
+    for seq in sequences:
+        for i in range(n):
+            pwm[(i * 4) + base_index[seq[i]]] += 1
 
-	for i in range(0, n * 4, 4):
-		pwm[i: i + 4] = pwm[i: i + 4] / sum(pwm[i: i + 4])
-	
-	return pwm
+    for i in range(0, n * 4, 4):
+        pwm[i : i + 4] = pwm[i : i + 4] / sum(pwm[i : i + 4])
+
+    return pwm
 
 
 def consensus(pwm):
 
-	nucleotides = ['A', 'C', 'G', 'T']
-	max_indices = np.argmax(pwm, axis=0)
-	consensus = ''.join([nucleotides[idx] for idx in max_indices])
+    nucleotides = ["A", "C", "G", "T"]
+    max_indices = np.argmax(pwm, axis=0)
+    consensus = "".join([nucleotides[idx] for idx in max_indices])
 
-	return consensus
+    return consensus
 
 
 def make_logo(pwm, file, sequence):
-	
-	logo = logomaker.Logo(pwm)
-	logo.style_spines(visible=False)
-	logo.style_spines(spines=['left', 'bottom'], visible=True)
-	logo.ax.set_ylabel("Position")
-	logo.ax.set_ylabel("Frequency")
-	logo.ax.set_title(file.split("/")[-1] + " " + sequence)
 
-	plt.savefig(file + "." + sequence + ".png")
+    logo = logomaker.Logo(pwm)
+    logo.style_spines(visible=False)
+    logo.style_spines(spines=["left", "bottom"], visible=True)
+    logo.ax.set_ylabel("Position")
+    logo.ax.set_ylabel("Frequency")
+    logo.ax.set_title(file.split("/")[-1] + " " + sequence)
+
+    plt.savefig(file + "." + sequence + ".png")
 
 
 def KL_divergence(target, background):
-	kl_sum = 0
-	for i in range(len(target) // 4):
-		kl_sum += stats.entropy(target[(i * 4):(i * 4) + 5], background[(i * 4):(i * 4) + 5])
-	
-	return kl_sum
+    kl_sum = 0
+    for i in range(len(target) // 4):
+        kl_sum += stats.entropy(
+            target[(i * 4) : (i * 4) + 5], background[(i * 4) : (i * 4) + 5]
+        )
+
+    return kl_sum
 
 
 def permutation_test(target_sequences, background_sequences, test_kl, iterations):
 
-	counts = 0
-	mean_sum = 0
-	len_target = len(target_sequences)
-	combined_sequences = target_sequences + background_sequences
+    counts = 0
+    mean_sum = 0
+    len_target = len(target_sequences)
+    combined_sequences = target_sequences + background_sequences
 
-	# Permutation
-	for i in range(iterations):
+    # Permutation
+    for i in range(iterations):
 
-		random.shuffle(combined_sequences)
-		rand_target = combined_sequences[:len_target]
-		rand_background = combined_sequences[len_target:]
-		kl = KL_divergence(get_pwm(rand_target), get_pwm(rand_background))
+        random.shuffle(combined_sequences)
+        rand_target = combined_sequences[:len_target]
+        rand_background = combined_sequences[len_target:]
+        kl = KL_divergence(get_pwm(rand_target), get_pwm(rand_background))
 
+        # Is this appropriate if list size is unequal?
+        # Do I have enough data for this? How much sampling is approparite for this dataset?
+        # PWM and KL is a bit computationally intensive? Will fix lol
 
-		# Is this appropriate if list size is unequal?
-		# Do I have enough data for this? How much sampling is approparite for this dataset?
-		# PWM and KL is a bit computationally intensive? Will fix lol
+        mean_sum += kl
 
-		mean_sum += kl
+        # This has never hit there is no way this is working this well?
+        if test_kl <= kl:
+            counts += 1
 
-		# This has never hit there is no way this is working this well?
-		if test_kl <= kl:
-			counts += 1
-
-	return counts / iterations, mean_sum / iterations
+    return counts / iterations, mean_sum / iterations
 
 
 ##############################################################
 if __name__ == "__main__":
-	
-	args = parse_arguments()
 
-	target_sequences = read_fasta(args.target)
-	background_sequences = read_fasta(args.background)
+    args = parse_arguments()
 
-	target_pwm = get_pwm(target_sequences)
-	background_pwm = get_pwm(background_sequences)
-	test_kl = KL_divergence(target_pwm, background_pwm)
+    target_sequences = read_fasta(args.target)
+    background_sequences = read_fasta(args.background)
 
-	p_value, sim_kl_mean = permutation_test(target_sequences, background_sequences, test_kl, 1000)
+    target_pwm = get_pwm(target_sequences)
+    background_pwm = get_pwm(background_sequences)
+    test_kl = KL_divergence(target_pwm, background_pwm)
 
-	seq_length = len(target_sequences[0])
-	target_df =  pd.DataFrame(target_pwm.reshape(seq_length, 4), columns=['A', 'C', 'G', 'T'], index=range(len(target_sequences[0])))
-	background_df =  pd.DataFrame(background_pwm.reshape(seq_length, 4), columns=['A', 'C', 'G', 'T'], index=range(len(target_sequences[0])))
+    p_value, sim_kl_mean = permutation_test(
+        target_sequences, background_sequences, test_kl, 1000
+    )
 
-	# Create Consensus Sequence
-	con_target = consensus(target_df.T)
-	con_background = consensus(background_df.T)
+    seq_length = len(target_sequences[0])
+    target_df = pd.DataFrame(
+        target_pwm.reshape(seq_length, 4),
+        columns=["A", "C", "G", "T"],
+        index=range(len(target_sequences[0])),
+    )
+    background_df = pd.DataFrame(
+        background_pwm.reshape(seq_length, 4),
+        columns=["A", "C", "G", "T"],
+        index=range(len(target_sequences[0])),
+    )
 
-	# Create Logos
-	make_logo(target_df, args.output, "Target")
-	make_logo(background_df, args.output, "Background")
+    # Create Consensus Sequence
+    con_target = consensus(target_df.T)
+    con_background = consensus(background_df.T)
 
-	with open(args.output + ".results.txt", "w") as fo:
-		fo.write("Target_Consensus\tBackground_Consensus\tKL\tSim_KL_Mean\tP_Value\n")
-		fo.write(con_target + "\t" + con_background + "\t" + str(test_kl) + "\t" + str(sim_kl_mean) + "\t" + str(p_value) + "\n")
-	
+    # Create Logos
+    make_logo(target_df, args.output, "Target")
+    make_logo(background_df, args.output, "Background")
+
+    with open(args.output + ".results.txt", "w") as fo:
+        fo.write("Target_Consensus\tBackground_Consensus\tKL\tSim_KL_Mean\tP_Value\n")
+        fo.write(
+            con_target
+            + "\t"
+            + con_background
+            + "\t"
+            + str(test_kl)
+            + "\t"
+            + str(sim_kl_mean)
+            + "\t"
+            + str(p_value)
+            + "\n"
+        )
