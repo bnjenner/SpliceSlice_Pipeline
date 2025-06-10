@@ -3,9 +3,7 @@ import sys
 with open(sys.argv[2], "r") as fi:
 
     lines = fi.readlines()
-
     result = {}
-
     curr_header = ""
 
     for line in lines:
