@@ -49,6 +49,7 @@ def read_fasta(file):
         return sequences
 
 
+# Create Postion Weigt Matrix
 def get_pwm(sequences):
 
     base_index = {"A": 0, "C": 1, "G": 2, "T": 3}
@@ -66,6 +67,7 @@ def get_pwm(sequences):
     return pwm
 
 
+# Get "Consensus" Sequence
 def consensus(pwm):
 
     nucleotides = ["A", "C", "G", "T"]
@@ -74,7 +76,7 @@ def consensus(pwm):
 
     return consensus
 
-
+# Get Sequence Logo
 def make_logo(pwm, file, sequence):
 
     logo = logomaker.Logo(pwm)
@@ -86,7 +88,7 @@ def make_logo(pwm, file, sequence):
 
     plt.savefig(file + "." + sequence + ".png")
 
-
+# Calculate KL Divergence
 def KL_divergence(target, background):
     kl_sum = 0
     for i in range(len(target) // 4):
@@ -96,7 +98,7 @@ def KL_divergence(target, background):
 
     return kl_sum
 
-
+# Perform Permutation Test
 def permutation_test(target_sequences, background_sequences, test_kl, iterations):
 
     counts = 0
@@ -111,10 +113,6 @@ def permutation_test(target_sequences, background_sequences, test_kl, iterations
         rand_target = combined_sequences[:len_target]
         rand_background = combined_sequences[len_target:]
         kl = KL_divergence(get_pwm(rand_target), get_pwm(rand_background))
-
-        # Is this appropriate if list size is unequal?
-        # Do I have enough data for this? How much sampling is approparite for this dataset?
-        # PWM and KL is a bit computationally intensive? Will fix lol
 
         mean_sum += kl
 
