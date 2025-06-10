@@ -62,31 +62,31 @@ slice() {
 
 	if [ $training == "true" ]; then
 		python3 ${script_dir}/scripts/intron_slicer.py -i $input \
-												 		-a $gtf \
-												 		-o ${outpath}/${prefix}.introns.bed \
-												 		--training \
-														> ${outpath}/bp_training.bed
+							       -a $gtf \
+							       -o ${outpath}/${prefix}.introns.bed \
+							       --training \
+							       > ${outpath}/bp_training.bed
 
 		bedtools getfasta -fi $ref \
-					  	  -bed <(awk '!seen[$1,$2,$3,$6]++' ${outpath}/bp_training.bed) \
-					  	  -s -name -fo ${outpath}/bp_training.fasta
+				  -bed <(awk '!seen[$1,$2,$3,$6]++' ${outpath}/bp_training.bed) \
+				  -s -name -fo ${outpath}/bp_training.fasta
 
 	else 
 		python3 ${script_dir}/scripts/intron_slicer.py -i $input \
-								 		 			   -a $gtf \
-								 		 			   -o ${outpath}/${prefix}.introns.bed
+							       -a $gtf \
+							       -o ${outpath}/${prefix}.introns.bed
 
 	fi
 
 	# Get Sequences
 	bedtools getfasta -fi $ref \
-					  -bed <(grep ".target" ${outpath}/${prefix}.introns.bed) \
-					  -s -name -fo ${outpath}/${prefix}.target.fasta
+			  -bed <(grep ".target" ${outpath}/${prefix}.introns.bed) \
+			  -s -name -fo ${outpath}/${prefix}.target.fasta
 
 	# Get Sequences
-	bedtools getfasta -fi $ref\
-					  -bed <(grep ".ppt" ${outpath}/${prefix}.introns.bed) \
-					  -s -name -fo ${outpath}/${prefix}.ppt.fasta	
+	bedtools getfasta -fi $ref \
+			  -bed <(grep ".ppt" ${outpath}/${prefix}.introns.bed) \
+			  -s -name -fo ${outpath}/${prefix}.ppt.fasta	
 }
 
 
@@ -96,8 +96,8 @@ freq() {
 	local outpath=$2
 
 	python3 ${script_dir}/scripts/get_freqy.py ${script_dir}/data/scPPT_human.txt \
-											   ${training} \
-											   > ${outpath}/bp_training.octanucleotide_freqs.txt
+						   ${training} \
+						   > ${outpath}/bp_training.octanucleotide_freqs.txt
 }
 
 
@@ -109,9 +109,9 @@ predict() {
 	local genome=$4
 
 	python ${script_dir}/scripts/BP_PPT.py -b ${script_dir}/data/pwmBP_human.txt \
-                 			 			   -p ${inpath}/bp_training.octanucleotide_freqs.txt \
-                 						   -i ${inpath}/${prefix}.target.fasta \
-                 			 			   > ${outpath}/${prefix}.BP_predictions.txt
+                 			       -p ${inpath}/bp_training.octanucleotide_freqs.txt \
+                 			       -i ${inpath}/${prefix}.target.fasta \
+                 			       > ${outpath}/${prefix}.BP_predictions.txt
 
 
 	if [ -f ${outpath}/${prefix}.BP_predictions.fasta ]; then
@@ -132,8 +132,8 @@ predict() {
 				> ${outpath}/${prefix}.PPT_predictions.bed
 
 		bedtools getfasta -fi $genome \
-						  -bed ${outpath}/${prefix}.PPT_predictions.bed \
-						  -s -name -fo ${outpath}/${prefix}.PPT_predictions.fasta
+				  -bed ${outpath}/${prefix}.PPT_predictions.bed \
+				  -s -name -fo ${outpath}/${prefix}.PPT_predictions.fasta
 	fi
 
 }
@@ -165,8 +165,6 @@ perm_test() {
 
 	echo "[     ${group_1} vs ${group_2}... ]" 
 
-	# loacl group1_bp="${outpath}/01-BP_Predictions/${group_1}.BP_predictions.quant.fasta"
-	# local group2_bp="${outpath}/01-BP_Predictions/${group_2}.BP_predictions.quant.fasta"
 	local group1_bp="${outpath}/01-BP_Predictions/${group_1}.BP_predictions.fasta"
 	local group2_bp="${outpath}/01-BP_Predictions/${group_2}.BP_predictions.fasta"
 
@@ -191,8 +189,6 @@ perm_test() {
 	fi
 
 
-	# loacl group1_PPT="${outpath}/01-BP_Predictions/${group_1}.PPT_predictions.quant.fasta"
-	# local group2_PPT="${outpath}/01-BP_Predictions/${group_2}.PPT_predictions.quant.fasta"
 	local group1_ppt="${outpath}/01-BP_Predictions/${group_1}.PPT_predictions.fasta"
 	local group2_ppt="${outpath}/01-BP_Predictions/${group_2}.PPT_predictions.fasta"
 
@@ -255,8 +251,6 @@ mkdir -p ${output}/01-BP_Predictions
 predict $prefix_1 ${output}/00-IntronFiles ${output}/01-BP_Predictions $genome
 predict $prefix_2 ${output}/00-IntronFiles ${output}/01-BP_Predictions $genome
 
-#dupe $prefix_1 ${output}/01-BP_Predictions ${output}/00-IntronFiles
-#dupe $prefix_2 ${output}/01-BP_Predictions ${output}/00-IntronFiles
 
 
 # Perform Statsitical Tests
